@@ -1,11 +1,10 @@
 package connections
 
 import (
+	structs2 "github.com/seek-ret/ebpf-training/workshop1/internal/structs"
 	"log"
 	"sync"
 	"time"
-
-	"github.com/seek-ret/ebpf-training/internal/structs"
 )
 
 const (
@@ -13,10 +12,10 @@ const (
 )
 
 type Tracker struct {
-	connID structs.ConnID
+	connID structs2.ConnID
 
-	addr              structs.SockAddrIn
-	openTimestamp     uint64
+	addr          structs2.SockAddrIn
+	openTimestamp uint64
 	closeTimestamp    uint64
 	totalWrittenBytes uint64
 	totalReadBytes    uint64
@@ -31,7 +30,7 @@ type Tracker struct {
 	mutex   sync.RWMutex
 }
 
-func NewTracker(connID structs.ConnID) *Tracker {
+func NewTracker(connID structs2.ConnID) *Tracker {
 	return &Tracker{
 		connID:  connID,
 		recvBuf: make([]byte, 0, maxBufferSize),
@@ -68,23 +67,23 @@ func (conn *Tracker) Malformed() bool {
 		conn.totalWrittenBytes != conn.sentBytes
 }
 
-func (conn *Tracker) AddDataEvent(event structs.SocketDataEvent) {
+func (conn *Tracker) AddDataEvent(event structs2.SocketDataEvent) {
 	conn.mutex.Lock()
 	defer conn.mutex.Unlock()
 	conn.updateTimestamps()
 
 	switch event.Attr.Direction {
-	case structs.EgressTraffic:
+	case structs2.EgressTraffic:
 		conn.sentBuf = append(conn.sentBuf, event.Msg[:event.Attr.MsgSize]...)
 		conn.sentBytes += uint64(event.Attr.MsgSize)
-	case structs.IngressTraffic:
+	case structs2.IngressTraffic:
 		conn.recvBuf = append(conn.recvBuf, event.Msg[:event.Attr.MsgSize]...)
 		conn.recvBytes += uint64(event.Attr.MsgSize)
 	default:
 	}
 }
 
-func (conn *Tracker) AddOpenEvent(event structs.SocketOpenEvent) {
+func (conn *Tracker) AddOpenEvent(event structs2.SocketOpenEvent) {
 	conn.mutex.Lock()
 	defer conn.mutex.Unlock()
 	conn.updateTimestamps()
@@ -95,7 +94,7 @@ func (conn *Tracker) AddOpenEvent(event structs.SocketOpenEvent) {
 	conn.openTimestamp = event.TimestampNano
 }
 
-func (conn *Tracker) AddCloseEvent(event structs.SocketCloseEvent) {
+func (conn *Tracker) AddCloseEvent(event structs2.SocketCloseEvent) {
 	conn.mutex.Lock()
 	defer conn.mutex.Unlock()
 	conn.updateTimestamps()

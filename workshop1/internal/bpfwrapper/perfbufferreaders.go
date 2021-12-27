@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/seek-ret/ebpf-training/workshop1/internal/connections"
+	"github.com/seek-ret/ebpf-training/workshop1/internal/settings"
+	"github.com/seek-ret/ebpf-training/workshop1/internal/structs"
 	"log"
 	"unsafe"
 
 	bpf "github.com/iovisor/gobpf/bcc"
-
-	"github.com/seek-ret/ebpf-training/internal/connections"
-	"github.com/seek-ret/ebpf-training/internal/settings"
-	"github.com/seek-ret/ebpf-training/internal/structs"
 )
 
 // ProbeEventLoop is the signature for the callback functions to extract the events from the input channel.

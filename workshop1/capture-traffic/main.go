@@ -1,6 +1,10 @@
 package main
 
 import (
+	"github.com/seek-ret/ebpf-training/workshop1/internal/bpf"
+	bpfwrapper2 "github.com/seek-ret/ebpf-training/workshop1/internal/bpfwrapper"
+	"github.com/seek-ret/ebpf-training/workshop1/internal/connections"
+	"github.com/seek-ret/ebpf-training/workshop1/internal/settings"
 	"log"
 	"os"
 	"os/signal"
@@ -10,11 +14,6 @@ import (
 	"time"
 
 	"github.com/iovisor/gobpf/bcc"
-
-	"github.com/seek-ret/ebpf-training/internal/bpf"
-	"github.com/seek-ret/ebpf-training/internal/bpfwrapper"
-	"github.com/seek-ret/ebpf-training/internal/connections"
-	"github.com/seek-ret/ebpf-training/internal/settings"
 )
 
 // abortIfNotRoot checks the current user permissions, if the permissions are not elevated, we abort.
@@ -58,12 +57,12 @@ func main() {
 			time.Sleep(10 * time.Second)
 		}
 	}()
-	if err := bpfwrapper.LaunchPerfBufferConsumers(bpfModule, connectionFactory); err != nil {
+	if err := bpfwrapper2.LaunchPerfBufferConsumers(bpfModule, connectionFactory); err != nil {
 		log.Panic(err)
 	}
 
 	// Lastly, after everything is ready and configured, attach the kprobes and start capturing traffic.
-	if err := bpfwrapper.AttachKprobes(bpfModule); err != nil {
+	if err := bpfwrapper2.AttachKprobes(bpfModule); err != nil {
 		log.Panic(err)
 	}
 	log.Println("Sniffer is ready")

@@ -152,9 +152,6 @@ static inline __attribute__((__always_inline__)) void process_syscall_close(stru
     if (ret_val < 0) {
         return;
     }
-    if (close_args->fd < 0) {
-        return;
-    }
 
     uint32_t tgid = id >> 32;
     uint64_t tgid_fd = gen_tgid_fd(tgid, close_args->fd);
@@ -195,16 +192,7 @@ static inline __attribute__((__always_inline__)) bool is_http_connection(struct 
     if (buf[0] == 'G' && buf[1] == 'E' && buf[2] == 'T') {
         res = true;
     }
-    if (buf[0] == 'H' && buf[1] == 'E' && buf[2] == 'A' && buf[3] == 'D') {
-        res = true;
-    }
     if (buf[0] == 'P' && buf[1] == 'O' && buf[2] == 'S' && buf[3] == 'T') {
-        res = true;
-    }
-    if (buf[0] == 'P' && buf[1] == 'U' && buf[2] == 'T') {
-        res = true;
-    }
-    if (buf[0] == 'D' && buf[1] == 'E' && buf[2] == 'L' && buf[3] == 'E' && buf[4] == 'T' && buf[5] == 'E') {
         res = true;
     }
 
@@ -276,28 +264,11 @@ static __inline void perf_submit_wrapper(struct pt_regs* ctx,
     }
 }
 
-
-static __inline void update_conn_stats(struct conn_info_t* conn_info, enum traffic_direction_t direction, ssize_t bytes_count) {
-    // Update state of the connection.
-    switch (direction) {
-        case kEgress:
-            conn_info->wr_bytes += bytes_count;
-            break;
-        case kIngress:
-            conn_info->rd_bytes += bytes_count;
-            break;
-    }
-}
-
 static inline __attribute__((__always_inline__)) void process_data(struct pt_regs* ctx, uint64_t id,
                                                                    enum traffic_direction_t direction,
                                                                    const struct data_args_t* args, ssize_t bytes_count) {
     // Always check access to pointer before accessing them.
     if (args->buf == NULL) {
-        return;
-    }
-
-    if (args->fd < 0) {
         return;
     }
 
@@ -307,9 +278,9 @@ static inline __attribute__((__always_inline__)) void process_data(struct pt_reg
         return;
     }
 
-    uint32_t tgid = id >> 32;
-    uint64_t tgid_fd = gen_tgid_fd(tgid, args->fd);
-    struct conn_info_t* conn_info = conn_info_map.lookup(&tgid_fd);
+    uint32_t pid = id >> 32;
+    uint64_t pid_fd = ((uint64_t)pid << 32) | (uint32_t)args->fd;
+    struct conn_info_t* conn_info = conn_info_map.lookup(&pid_fd);
     if (conn_info == NULL) {
         // The FD being read/written does not represent an IPv4 socket FD.
         return;
@@ -332,7 +303,15 @@ static inline __attribute__((__always_inline__)) void process_data(struct pt_reg
         perf_submit_wrapper(ctx, direction, args->buf, bytes_count, conn_info, event);
     }
 
-    update_conn_stats(conn_info, direction, bytes_count);
+	// Update the conn_info total written/read bytes.
+	switch (direction) {
+        case kEgress:
+            conn_info->wr_bytes += bytes_count;
+            break;
+        case kIngress:
+            conn_info->rd_bytes += bytes_count;
+            break;
+    }
 }
 
 // Hooks
@@ -349,7 +328,6 @@ int syscall__probe_entry_accept(struct pt_regs* ctx, int sockfd, struct sockaddr
 
 int syscall__probe_ret_accept(struct pt_regs* ctx) {
     uint64_t id = bpf_get_current_pid_tgid();
-
 
     // Pulling the addr from the map.
     struct accept_args_t* accept_args = active_accept_args_map.lookup(&id);
@@ -442,7 +420,6 @@ int syscall__probe_ret_read(struct pt_regs* ctx) {
 // original signature: int close(int fd)
 int syscall__probe_entry_close(struct pt_regs* ctx, int fd) {
     uint64_t id = bpf_get_current_pid_tgid();
-
     struct close_args_t close_args;
     close_args.fd = fd;
     active_close_args_map.update(&id, &close_args);
@@ -452,7 +429,6 @@ int syscall__probe_entry_close(struct pt_regs* ctx, int fd) {
 
 int syscall__probe_ret_close(struct pt_regs* ctx) {
     uint64_t id = bpf_get_current_pid_tgid();
-
     const struct close_args_t* close_args = active_close_args_map.lookup(&id);
     if (close_args != NULL) {
         process_syscall_close(ctx, id, close_args);

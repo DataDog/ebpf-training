@@ -2,10 +2,9 @@ package connections
 
 import (
 	"fmt"
+	"github.com/seek-ret/ebpf-training/workshop1/internal/structs"
 	"sync"
 	"time"
-
-	"github.com/seek-ret/ebpf-training/internal/structs"
 )
 
 // Factory is a routine-safe container that holds a trackers with unique ID, and able to create new tracker.
@@ -33,7 +32,7 @@ func (factory *Factory) HandleReadyConnections() {
 			if len(tracker.sentBuf) == 0 && len(tracker.recvBuf) == 0 {
 				continue
 			}
-			fmt.Printf("========================>\nFound HTTP payload\nRequest->\n%s\n\nResponse->\n%s\n\n<========================\n", tracker.sentBuf, tracker.recvBuf)
+			fmt.Printf("========================>\nFound HTTP payload\nRequest->\n%s\n\nResponse->\n%s\n\n<========================\n", tracker.recvBuf, tracker.sentBuf)
 		} else if tracker.Malformed() {
 			trackersToDelete[connID] = struct{}{}
 		} else if tracker.IsInactive(factory.inactivityThreshold) {
