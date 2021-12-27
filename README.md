@@ -1,5 +1,5 @@
 # Simple HTTP traffic captures using BCC
-This branch contains our implementation for the code in our [article](https://seekret.io)
+This branch contains full implementation for the code in our [article](https://seekret.io)
 
 ## Prerequisites
 1. Any linux machine (ubuntu, debian, etc.)
