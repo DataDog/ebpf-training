@@ -19,10 +19,11 @@
 package main
 
 import (
-	"github.com/seek-ret/ebpf-training/workshop1/internal/bpf"
+	"fmt"
 	bpfwrapper2 "github.com/seek-ret/ebpf-training/workshop1/internal/bpfwrapper"
 	"github.com/seek-ret/ebpf-training/workshop1/internal/connections"
 	"github.com/seek-ret/ebpf-training/workshop1/internal/settings"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -54,6 +55,16 @@ func recoverFromCrashes() {
 }
 
 func main() {
+	if len(os.Args) != 2 {
+		fmt.Println("Usage: go run main.go <path to bpf source code>")
+		os.Exit(1)
+	}
+	bpfSourceCodeFile := os.Args[1]
+	bpfSourceCodeContent, err := ioutil.ReadFile(bpfSourceCodeFile)
+	if err != nil {
+		log.Panic(err)
+	}
+
 	defer recoverFromCrashes()
 	abortIfNotRoot()
 
@@ -65,7 +76,10 @@ func main() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 
-	bpfModule := bcc.NewModule(bpf.BPFSource, nil)
+	bpfModule := bcc.NewModule(string(bpfSourceCodeContent), nil)
+	if bpfModule == nil {
+		log.Panic("bpf is nil")
+	}
 	defer bpfModule.Close()
 
 	connectionFactory := connections.NewFactory(time.Minute)
