@@ -3,7 +3,7 @@ This branch contains our implementation for the code in our [article](https://se
 
 ## Prerequisites
 - Any linux machine (ubuntu, debian, etc.)
-- BCC - (installation guide](https://github.com/iovisor/bcc/blob/master/INSTALL.md)
+- BCC - [installation guide](https://github.com/iovisor/bcc/blob/master/INSTALL.md)
   - Installing BCC might not work as expected. So we are collecting good links for possible errors:
     - https://stackoverflow.com/questions/61978175/how-to-compile-bcc-on-ubuntu-20-04
     - https://github.com/iovisor/bcc/issues/3601
