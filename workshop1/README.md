@@ -7,6 +7,9 @@ This branch contains our implementation for the code in our [article](https://se
 3. go version 1.16+ - [installation guide](https://go.dev/doc/install)
 
 You can install those requirements on your local machine, or you can use a predefined docker!
+Note: The docker was tested on ubuntu 20.04 with kernel `5.11.0-43-generic`.
+If you do have troubles with BCC from the docker, please install BCC and goland on your machine and don't use the docker.
+
 ```bash
 docker pull gcr.io/seekret/ebpf-training-setup:latest`
 ```
