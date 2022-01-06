@@ -1,3 +1,5 @@
+// +build ignore
+
 /*
  * Copyright 2018- The Pixie Authors.
  *
@@ -16,9 +18,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package bpf
-
-const BPFSource = `#include <linux/in6.h>
+#include <linux/in6.h>
 #include <linux/net.h>
 #include <linux/socket.h>
 #include <net/inet_sock.h>
@@ -43,10 +43,11 @@ enum traffic_direction_t {
 
 // Structs
 
-// Unique identifier for a connection.
+// A struct representing a unique ID that is composed of the pid, the file
+// descriptor and the creation time of the struct.
 struct conn_id_t {
-    // Thread group id
-    uint32_t tgid;
+    // Process ID
+    uint32_t pid;
     // The file descriptor to the opened network connection.
     int32_t fd;
     // Timestamp at the initialization of the struct.
@@ -54,7 +55,7 @@ struct conn_id_t {
 };
 
 // This struct contains information collected when a connection is established,
-// via an accept() syscall.
+// via an accept4() syscall.
 struct conn_info_t {
     // Connection identifier.
     struct conn_id_t conn_id;
@@ -67,29 +68,42 @@ struct conn_info_t {
     bool is_http;
 };
 
+// An helper struct that hold the addr argument of the syscall.
 struct accept_args_t {
     struct sockaddr_in* addr;
 };
 
+// An helper struct to cache input argument of read/write syscalls between the
+// entry hook and the exit hook.
 struct data_args_t {
     int32_t fd;
     const char* buf;
 };
 
+// An helper struct that hold the input arguments of the close syscall.
 struct close_args_t {
     int32_t fd;
 };
 
+// A struct describing the event that we send to the user mode upon a new connection.
 struct socket_open_event_t {
+    // The time of the event.
     uint64_t timestamp_ns;
+    // A unique ID for the connection.
     struct conn_id_t conn_id;
+    // The address of the client.
     struct sockaddr_in addr;
 };
 
+// Struct describing the close event being sent to the user mode.
 struct socket_close_event_t {
+    // Timestamp of the close syscall
     uint64_t timestamp_ns;
+    // The unique ID of the connection
     struct conn_id_t conn_id;
+    // Total number of bytes written on that connection
     int64_t wr_bytes;
+    // Total number of bytes read on that connection
     int64_t rd_bytes;
 };
 
@@ -120,14 +134,25 @@ struct socket_data_event_t {
 
 // Maps
 
+// A map of the active connections. The name of the map is conn_info_map
+// the key is of type uint64_t, the value is of type struct conn_info_t,
+// and the map won't be bigger than 128KB.
 BPF_HASH(conn_info_map, uint64_t, struct conn_info_t, 131072);
+// An helper map that will help us cache the input arguments of the accept syscall
+// between the entry hook and the return hook.
 BPF_HASH(active_accept_args_map, uint64_t, struct accept_args_t);
+// Perf buffer to send to the user-mode the data events.
 BPF_PERF_OUTPUT(socket_data_events);
+// A perf buffer that allows us send events from kernel to user mode.
+// This perf buffer is dedicated for special type of events - open events.
 BPF_PERF_OUTPUT(socket_open_events);
+// Perf buffer to send to the user-mode the close events.
 BPF_PERF_OUTPUT(socket_close_events);
 BPF_PERCPU_ARRAY(socket_data_event_buffer_heap, struct socket_data_event_t, 1);
 BPF_HASH(active_write_args_map, uint64_t, struct data_args_t);
+// Helper map to store read syscall arguments between entry and exit hooks.
 BPF_HASH(active_read_args_map, uint64_t, struct data_args_t);
+// An helper map to store close syscall arguments between entry and exit syscalls.
 BPF_HASH(active_close_args_map, uint64_t, struct close_args_t);
 
 // Helper functions
@@ -137,25 +162,30 @@ static __inline uint64_t gen_tgid_fd(uint32_t tgid, int fd) {
     return ((uint64_t)tgid << 32) | (uint32_t)fd;
 }
 
+// An helper function that checks if the syscall finished successfully and if it did
+// saves the new connection in a dedicated map of connections
 static __inline void process_syscall_accept(struct pt_regs* ctx, uint64_t id, const struct accept_args_t* args) {
+    // Extracting the return code, and checking if it represent a failure,
+    // if it does, we abort the as we have nothing to do.
     int ret_fd = PT_REGS_RC(ctx);
-    // If the syscall failed, we try to remove the stashed arguments from the map, and then abort.
     if (ret_fd <= 0) {
-        active_accept_args_map.delete(&id);
         return;
     }
 
     struct conn_info_t conn_info = {};
-    uint32_t tgid = id >> 32;
-    conn_info.conn_id.tgid = tgid;
+    uint32_t pid = id >> 32;
+    conn_info.conn_id.pid = pid;
     conn_info.conn_id.fd = ret_fd;
     conn_info.conn_id.tsid = bpf_ktime_get_ns();
 
-    uint64_t tgid_fd = gen_tgid_fd(tgid, ret_fd);
-    // Saving the connection info in a global map, so in the other syscalls (read, write and close) we will be able
-    // to know that we have seen the connection
-    conn_info_map.update(&tgid_fd, &conn_info);
+    uint64_t pid_fd = ((uint64_t)pid << 32) | (uint32_t)ret_fd;
+    // Saving the connection info in a global map, so in the other syscalls
+    // (read, write and close) we will be able to know that we have seen
+    // the connection
+    conn_info_map.update(&pid_fd, &conn_info);
 
+    // Sending an open event to the user mode, to let the user mode know that we
+    // have identified a new connection.
     struct socket_open_event_t open_event = {};
     open_event.timestamp_ns = bpf_ktime_get_ns();
     open_event.conn_id = conn_info.conn_id;
@@ -358,11 +388,14 @@ int syscall__probe_ret_accept(struct pt_regs* ctx) {
 }
 
 
-// original signature: int accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags);
+// Hooking the entry of accept4
+// the signature of the syscall is int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 int syscall__probe_entry_accept4(struct pt_regs* ctx, int sockfd, struct sockaddr* addr, socklen_t* addrlen) {
+    // Getting a unique ID for the relevant thread in the relevant pid.
+    // That way we can link different calls from the same thread.
     uint64_t id = bpf_get_current_pid_tgid();
 
-    // Keep the addr in a map to use during the exit method.
+    // Keep the addr in a map to use during the accpet4 exit hook.
     struct accept_args_t accept_args = {};
     accept_args.addr = (struct sockaddr_in *)addr;
     active_accept_args_map.update(&id, &accept_args);
@@ -370,15 +403,19 @@ int syscall__probe_entry_accept4(struct pt_regs* ctx, int sockfd, struct sockadd
     return 0;
 }
 
+// Hooking the exit of accept4
 int syscall__probe_ret_accept4(struct pt_regs* ctx) {
     uint64_t id = bpf_get_current_pid_tgid();
 
     // Pulling the addr from the map.
     struct accept_args_t* accept_args = active_accept_args_map.lookup(&id);
+    // If the id exist in the map, we will get a non empty pointer that holds
+    // the input address argument from the entry of the syscall.
     if (accept_args != NULL) {
         process_syscall_accept(ctx, id, accept_args);
     }
 
+    // Anyway, in the end clean the map.
     active_accept_args_map.delete(&id);
     return 0;
 }
@@ -424,17 +461,19 @@ int syscall__probe_entry_read(struct pt_regs* ctx, int fd, char* buf, size_t cou
 
 int syscall__probe_ret_read(struct pt_regs* ctx) {
     uint64_t id = bpf_get_current_pid_tgid();
-    ssize_t bytes_count = PT_REGS_RC(ctx); // Also stands for return code.
-    // Unstash arguments, and process syscall.
+
+    // The return code the syscall is the number of bytes read as well.
+    ssize_t bytes_count = PT_REGS_RC(ctx);
     struct data_args_t* read_args = active_read_args_map.lookup(&id);
     if (read_args != NULL) {
+        // kIngress is an enum value that let's the process_data function
+        // to know whether the input buffer is incoming or outgoing.
         process_data(ctx, id, kIngress, read_args, bytes_count);
     }
 
     active_read_args_map.delete(&id);
     return 0;
 }
-
 // original signature: int close(int fd)
 int syscall__probe_entry_close(struct pt_regs* ctx, int fd) {
     uint64_t id = bpf_get_current_pid_tgid();
@@ -454,4 +493,4 @@ int syscall__probe_ret_close(struct pt_regs* ctx) {
 
     active_close_args_map.delete(&id);
     return 0;
-}`
+}
