@@ -26,6 +26,23 @@ void perf_reader_free(void *ptr);
 */
 import "C"
 
+// protocols contains minimal mappings between internet protocol
+// names and numbers for platforms that don't have a complete list of
+// protocol numbers.
+//
+// See https://www.iana.org/assignments/protocol-numbers
+//
+// On Unix, this map is augmented by readProtocols via lookupProtocol.
+
+var protocols = map[uint32]string{
+	0:  "HOPOPT",
+	1:  "icmp",
+	2:  "igmp",
+	6:  "tcp",
+	17: "udp",
+	58: "ipv6-icmp",
+}
+
 func usage() {
 	fmt.Printf("Usage: sudo %v <xdp bpf code> <ifdev>\n", os.Args[0])
 	fmt.Printf("e.g.: sudo %v xdp_prog.c lo\n", os.Args[0])
@@ -47,13 +64,11 @@ func main() {
 
 	device = os.Args[2]
 
-	ret := "XDP_DROP"
-	ctxtype := "xdp_md"
+	ret := "XDP_PASS"
 
 	module := bcc.NewModule(string(bpfSourceCodeContent), []string{
 		"-w",
 		"-DRETURNCODE=" + ret,
-		"-DCTXTYPE=" + ctxtype,
 	})
 	defer module.Close()
 
@@ -86,7 +101,11 @@ func main() {
 
 	fmt.Printf("\n{IP protocol-number}: {total dropped pkts}\n")
 	for it := dropcnt.Iter(); it.Next(); {
-		key := bcc.GetHostByteOrder().Uint32(it.Key())
+		key := protocols[bcc.GetHostByteOrder().Uint32(it.Key())]
+		if key == "" {
+			key = "Unknown"
+		}
+		//key := bcc.GetHostByteOrder().Uint32(it.Key())
 		value := bcc.GetHostByteOrder().Uint64(it.Leaf())
 
 		if value > 0 {

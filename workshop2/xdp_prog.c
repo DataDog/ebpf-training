@@ -7,7 +7,8 @@
 #include <linux/ip.h>
 #include <linux/ipv6.h>
 
-BPF_TABLE("array", int, long, dropcnt, 256);
+BPF_ARRAY(dropcnt, long, 256);
+
 static inline int parse_ipv4(void *data, u64 nh_off, void *data_end)
 {
     struct iphdr *iph = data + nh_off;
@@ -24,11 +25,12 @@ static inline int parse_ipv6(void *data, u64 nh_off, void *data_end)
     return ip6h->nexthdr;
 }
 
-int xdp_prog1(struct CTXTYPE *ctx)
+int xdp_prog1(struct xdp_md *ctx)
 {
     void *data_end = (void *)(long)ctx->data_end;
     void *data = (void *)(long)ctx->data;
     struct ethhdr *eth = data;
+
     // drop packets
     int rc = RETURNCODE; // let pass XDP_PASS or redirect to tx via XDP_TX
     long *value;
@@ -39,6 +41,7 @@ int xdp_prog1(struct CTXTYPE *ctx)
     if (data + nh_off > data_end)
         return rc;
     h_proto = eth->h_proto;
+
     // While the following code appears to be duplicated accidentally,
     // it's intentional to handle double tags in ethernet frames.
     if (h_proto == htons(ETH_P_8021Q) || h_proto == htons(ETH_P_8021AD))
@@ -59,6 +62,7 @@ int xdp_prog1(struct CTXTYPE *ctx)
             return rc;
         h_proto = vhdr->h_vlan_encapsulated_proto;
     }
+
     if (h_proto == htons(ETH_P_IP))
         index = parse_ipv4(data, nh_off, data_end);
     else if (h_proto == htons(ETH_P_IPV6))
