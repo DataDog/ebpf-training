@@ -64,7 +64,7 @@ func main() {
 
 	device = os.Args[2]
 
-	ret := "XDP_PASS"
+	ret := "XDP_DROP"
 
 	module := bcc.NewModule(string(bpfSourceCodeContent), []string{
 		"-w",
@@ -72,7 +72,7 @@ func main() {
 	})
 	defer module.Close()
 
-	fn, err := module.Load("xdp_prog1", C.BPF_PROG_TYPE_XDP, 1, 65536)
+	fn, err := module.Load("xdp_dropper", C.BPF_PROG_TYPE_XDP, 1, 65536)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load xdp prog: %v\n", err)
 		os.Exit(1)

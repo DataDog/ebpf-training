@@ -1,3 +1,6 @@
+// Copyright (c) 2017 GustavoKatel
+// Licensed under the Apache License, Version 2.0 (the "License")
+
 #define KBUILD_MODNAME "foo"
 #include <uapi/linux/bpf.h>
 #include <linux/in.h>
@@ -25,14 +28,14 @@ static inline int parse_ipv6(void *data, u64 nh_off, void *data_end)
     return ip6h->nexthdr;
 }
 
-int xdp_prog1(struct xdp_md *ctx)
+int xdp_dropper(struct xdp_md *ctx)
 {
     void *data_end = (void *)(long)ctx->data_end;
     void *data = (void *)(long)ctx->data;
     struct ethhdr *eth = data;
 
     // drop packets
-    int rc = RETURNCODE; // let pass XDP_PASS or redirect to tx via XDP_TX
+    int rc = RETURNCODE;
     long *value;
     uint16_t h_proto;
     uint64_t nh_off = 0;
