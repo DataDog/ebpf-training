@@ -23,8 +23,6 @@ USER_OBJ := ${USER_C:.c=.o}
 COMMON_DIR ?= ../common/
 LIBBPF_DIR ?= ../libbpf/src/
 
-$(info    ${LIBBPF_DIR})
-
 COPY_LOADER ?=
 LOADER_DIR ?= $(COMMON_DIR)/../basic-solutions
 
