@@ -105,7 +105,6 @@ func main() {
 		if key == "" {
 			key = "Unknown"
 		}
-		//key := bcc.GetHostByteOrder().Uint32(it.Key())
 		value := bcc.GetHostByteOrder().Uint64(it.Leaf())
 
 		if value > 0 {
