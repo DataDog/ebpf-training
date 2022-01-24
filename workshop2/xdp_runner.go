@@ -95,7 +95,7 @@ func main() {
 
 	<-sig
 
-	fmt.Printf("\n{IP protocol-number}: {total dropped pkts}\n")
+	fmt.Printf("\n{IP protocol}: {total dropped pkts}\n")
 	for it := dropcnt.Iter(); it.Next(); {
 		key := protocols[bcc.GetHostByteOrder().Uint32(it.Key())]
 		if key == "" {
