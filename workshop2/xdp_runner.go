@@ -10,7 +10,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/signal"
 
@@ -50,8 +49,6 @@ func usage() {
 }
 
 func main() {
-	var device string
-
 	if len(os.Args) != 3 {
 		usage()
 	}
@@ -59,16 +56,14 @@ func main() {
 	bpfSourceCodeFile := os.Args[1]
 	bpfSourceCodeContent, err := ioutil.ReadFile(bpfSourceCodeFile)
 	if err != nil {
-		log.Panic(err)
+		fmt.Fprintf(os.Stderr, "Failed to read bpf source code file %s with error: %v\n", bpfSourceCodeFile, err)
+		os.Exit(1)
 	}
 
-	device = os.Args[2]
-
-	ret := "XDP_DROP"
-
+	xdpReturnCode := "XDP_DROP"
 	module := bcc.NewModule(string(bpfSourceCodeContent), []string{
 		"-w",
-		"-DRETURNCODE=" + ret,
+		"-DRETURNCODE=" + xdpReturnCode,
 	})
 	defer module.Close()
 
@@ -78,6 +73,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	device := os.Args[2]
 	err = module.AttachXDP(device, fn)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to attach xdp prog: %v\n", err)
