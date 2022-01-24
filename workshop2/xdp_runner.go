@@ -1,4 +1,4 @@
-// xdp_drop.go Drop incoming packets on XDP layer and count for which
+// Drop incoming packets on XDP layer and count for which
 // protocol type. Based on:
 // https://github.com/iovisor/bcc/blob/master/examples/networking/xdp/xdp_drop_count.py
 //
