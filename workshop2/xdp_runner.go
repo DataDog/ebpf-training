@@ -34,12 +34,6 @@ var protocols = map[uint32]string{
 	58: "ipv6-icmp",
 }
 
-func usage() {
-	fmt.Printf("Usage: sudo %v <xdp bpf code> <ifdev>\n", os.Args[0])
-	fmt.Printf("e.g.: sudo %v xdp_prog.c lo\n", os.Args[0])
-	os.Exit(1)
-}
-
 func main() {
 	if len(os.Args) != numberOfArguments+1 {
 		usage()
@@ -95,4 +89,10 @@ func main() {
 			fmt.Printf("%v: %v packets\n", key, value)
 		}
 	}
+}
+
+func usage() {
+	fmt.Printf("Usage: sudo %v <xdp bpf code> <ifdev>\n", os.Args[0])
+	fmt.Printf("e.g.: sudo %v xdp_prog.c lo\n", os.Args[0])
+	os.Exit(1)
 }
