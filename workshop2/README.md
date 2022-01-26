@@ -47,7 +47,7 @@ Or on your local machine
 ```bash
 sudo go run xdp_runner.go xdp_prog.c lo
 ```
-`lo` means localhost interface, use the `ip link` command to see all available interfaces.
+`lo` means loopback interface, use the `ip link` command to see all available interfaces.
 
 ## Running test client
 ```bash
