@@ -26,24 +26,36 @@ int xdp_counter(struct xdp_md *ctx)
     uint64_t network_header_offset = sizeof(*eth);
 
     if (data + network_header_offset > data_end)
+    {
         return RETURN_CODE;
+    }
 
     uint16_t h_proto = eth->h_proto;
     int protocol_index;
 
     if (h_proto == htons(ETH_P_IP))
+    {
         protocol_index = parse_ipv4(data + network_header_offset, data_end);
+    }
     else if (h_proto == htons(ETH_P_IPV6))
+    {
         protocol_index = parse_ipv6(data + network_header_offset, data_end);
+    }
     else
+    {
         protocol_index = 0;
+    }
 
     if (protocol_index == 0)
+    {
         return RETURN_CODE;
-    
+    }
+
     long *protocol_count = protocol_counter.lookup(&protocol_index);
     if (protocol_count)
+    {
         lock_xadd(protocol_count, 1);
+    }
     return RETURN_CODE;
 }
 
@@ -51,7 +63,9 @@ static inline int parse_ipv4(void *ip_data, void *data_end)
 {
     struct iphdr *ip_header = ip_data;
     if ((void *)&ip_header[1] > data_end)
+    {
         return 0;
+    }
     return ip_header->protocol;
 }
 
@@ -59,6 +73,8 @@ static inline int parse_ipv6(void *ipv6_data, void *data_end)
 {
     struct ipv6hdr *ip6_header = ipv6_data;
     if ((void *)&ip6_header[1] > data_end)
+    {
         return 0;
+    }
     return ip6_header->nexthdr;
 }

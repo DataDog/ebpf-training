@@ -46,7 +46,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	module := bcc.NewModule(string(bpfSourceCodeContent), []string{})
+	module := bcc.NewModule(string(bpfSourceCodeContent), nil)
 	defer module.Close()
 
 	fn, err := module.Load("xdp_counter", C.BPF_PROG_TYPE_XDP, bpfDefaultLogLevel, bpfLogSize)
