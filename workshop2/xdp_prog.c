@@ -38,10 +38,12 @@ int xdp_counter(struct xdp_md *ctx)
     else
         protocol_index = 0;
 
+    if (protocol_index == 0)
+        return RETURN_CODE;
+    
     long *protocol_count = protocol_counter.lookup(&protocol_index);
-    if (protocol_count) {
+    if (protocol_count)
         lock_xadd(protocol_count, 1);
-    }
     return RETURN_CODE;
 }
 
