@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0 (the "License")
 
 #include <uapi/linux/bpf.h>
+#include <linux/in.h>
 #include <linux/if_ether.h>
 #include <linux/if_packet.h>
 #include <linux/ip.h>
@@ -38,8 +39,9 @@ int xdp_counter(struct xdp_md *ctx)
         protocol_index = 0;
 
     long *protocol_count = protocolCounter.lookup(&protocol_index);
-    if (protocol_count)
+    if (protocol_count) {
         lock_xadd(protocol_count, 1);
+    }
     return RETURN_CODE;
 }
 
