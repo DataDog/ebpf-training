@@ -8,7 +8,7 @@
 #include <linux/ip.h>
 #include <linux/ipv6.h>
 
-BPF_ARRAY(protocolCounter, long, 256);
+BPF_ARRAY(protocol_counter, long, 256);
 const int RETURN_CODE = XDP_PASS;
 
 // Forward declaration
@@ -38,7 +38,7 @@ int xdp_counter(struct xdp_md *ctx)
     else
         protocol_index = 0;
 
-    long *protocol_count = protocolCounter.lookup(&protocol_index);
+    long *protocol_count = protocol_counter.lookup(&protocol_index);
     if (protocol_count) {
         lock_xadd(protocol_count, 1);
     }

@@ -80,7 +80,7 @@ func main() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, os.Kill)
 
-	protocolCounter := bcc.NewTable(module.TableId("protocolCounter"), module)
+	protocolCounter := bcc.NewTable(module.TableId("protocol_counter"), module)
 
 	<-sig
 
