@@ -1,4 +1,4 @@
-// Drop incoming packets on XDP layer and count for which protocol type.
+// Count incoming packets on XDP layer per protocol type.
 
 // Based on https://github.com/iovisor/gobpf/blob/master/examples/bcc/xdp/xdp_drop.go (2017 GustavoKatel)
 // Licensed under the Apache License, Version 2.0 (the "License")
@@ -15,13 +15,14 @@ import (
 )
 
 /*
-#cgo CFLAGS: -I/usr/include/bcc/compat
-#cgo LDFLAGS: -lbcc
-#include <bcc/bcc_common.h>
 #include <bcc/libbpf.h>
-void perf_reader_free(void *ptr);
 */
 import "C"
+
+const (
+	bpfDefaultLogLevel = 1
+	bpfLogSize         = 65536
+)
 
 var protocols = map[uint32]string{
 	0:  "HOPOPT",
@@ -50,23 +51,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	xdpReturnCode := "XDP_DROP"
-	module := bcc.NewModule(string(bpfSourceCodeContent), []string{
-		"-w",
-		"-DRETURNCODE=" + xdpReturnCode,
-	})
+	module := bcc.NewModule(string(bpfSourceCodeContent), []string{})
 	defer module.Close()
 
-	fn, err := module.Load("xdp_dropper", C.BPF_PROG_TYPE_XDP, 1, 65536)
+	fn, err := module.Load("xdp_counter", C.BPF_PROG_TYPE_XDP, bpfDefaultLogLevel, bpfLogSize)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load xdp prog: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to load xdp program: %v\n", err)
 		os.Exit(1)
 	}
 
 	device := os.Args[2]
 	err = module.AttachXDP(device, fn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to attach xdp prog: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to attach xdp program: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -76,17 +73,17 @@ func main() {
 		}
 	}()
 
-	fmt.Println("Dropping packets, hit CTRL+C to stop")
+	fmt.Println("Counting packets, hit CTRL+C to stop")
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, os.Kill)
 
-	dropcnt := bcc.NewTable(module.TableId("dropcnt"), module)
+	protocolCounter := bcc.NewTable(module.TableId("protocolCounter"), module)
 
 	<-sig
 
-	fmt.Printf("\n{IP protocol}: {total dropped pkts}\n")
-	for it := dropcnt.Iter(); it.Next(); {
+	fmt.Printf("\n{IP protocol}: {total number of packets}\n")
+	for it := protocolCounter.Iter(); it.Next(); {
 		key := protocols[bcc.GetHostByteOrder().Uint32(it.Key())]
 		if key == "" {
 			key = "Unknown"
@@ -94,7 +91,7 @@ func main() {
 		value := bcc.GetHostByteOrder().Uint64(it.Leaf())
 
 		if value > 0 {
-			fmt.Printf("%v: %v pkts\n", key, value)
+			fmt.Printf("%v: %v packets\n", key, value)
 		}
 	}
 }
