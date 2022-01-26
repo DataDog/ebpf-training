@@ -20,6 +20,7 @@ import (
 import "C"
 
 const (
+	numberOfArguments  = 2
 	bpfDefaultLogLevel = 1
 	bpfLogSize         = 65536
 )
@@ -40,7 +41,7 @@ func usage() {
 }
 
 func main() {
-	if len(os.Args) != 3 {
+	if len(os.Args) != numberOfArguments+1 {
 		usage()
 	}
 
