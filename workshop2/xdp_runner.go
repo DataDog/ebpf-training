@@ -25,6 +25,7 @@ const (
 	bpfLogSize         = 65536
 )
 
+// protocols is a mapping between a protocol number to its string representation
 var protocols = map[uint32]string{
 	0:  "HOPOPT",
 	1:  "icmp",
