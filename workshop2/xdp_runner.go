@@ -53,14 +53,14 @@ func main() {
 
 	fn, err := module.Load("xdp_counter", C.BPF_PROG_TYPE_XDP, bpfDefaultLogLevel, bpfLogSize)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load xdp program: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to load XDP program: %v\n", err)
 		os.Exit(1)
 	}
 
 	device := os.Args[2]
 	err = module.AttachXDP(device, fn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to attach xdp program: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to attach XDP program: %v\n", err)
 		os.Exit(1)
 	}
 
