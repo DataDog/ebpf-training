@@ -49,7 +49,7 @@ Run the following and wait for the script to finish. The script sends 2 ICMP req
 ```
 
 ## Output
-After running the client, unload the XDP program (ctrl + c) and check the stats to see the 8 ICMP packets that was captured - 4 ICMP requests and 4 ICMP responses (and maybe some other packets that were sent on your local interface).
+After running the client, unload the XDP program (ctrl + c) and check the stats to see the 8 ICMP packets that were captured - 4 ICMP requests and 4 ICMP responses (and maybe some other packets that were sent on your local interface).
 
 ## Demo
 After stopping the XDP program, you should see something similar to the following:
