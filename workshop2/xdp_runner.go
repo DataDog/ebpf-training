@@ -46,6 +46,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	fmt.Println("Loading and attaching the XDP program")
+
 	module := bcc.NewModule(string(bpfSourceCodeContent), nil)
 	defer module.Close()
 
