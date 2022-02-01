@@ -14,7 +14,7 @@ Note: The docker was tested on ubuntu 20.04 with kernel `5.11.0-43-generic`.
 If you do have troubles with BCC from the docker, please install BCC and goland on your machine and don't use the docker.
 
 ```bash
-docker pull gcr.io/seekret/ebpf-training-setup:latest`
+docker pull gcr.io/seekret/ebpf-training-setup:latest
 ```
 or
 ```bash
