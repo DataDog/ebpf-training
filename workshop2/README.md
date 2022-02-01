@@ -27,13 +27,6 @@ The following command will open an interactive shell inside the docker, use it t
 ./setup_docker.sh
 ``` 
 
-## Running the demo server
-Open a terminal and run the following:
-```bash
-cd demo-server
-go run main.go
-```
-
 ## Running the XDP program
 
 Open a second terminal and run the following:
@@ -49,14 +42,14 @@ sudo go run xdp_runner.go xdp_prog.c lo
 ```
 `lo` means loopback interface, use the `ip link` command to see all available interfaces.
 
-## Running test client
+## Running the test client
+Run the following and wait for the script to finish. The script sends 2 ICMP requests and 2 ICMPv6 requests.
 ```bash
 ./client/run.sh
 ```
-Make sure you are getting an answer from the server.
 
 ## Output
-After running the client, unload the XDP program (ctrl + c) and check the stats to see the tcp packets that was captured.
+After running the client, unload the XDP program (ctrl + c) and check the stats to see the 8 ICMP packets that were captured - 4 ICMP requests and 4 ICMP responses (and maybe some other packets that were sent on your local interface).
 
 ## Demo
 After stopping the XDP program, you should see something similar to the following:

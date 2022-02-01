@@ -1,3 +1,3 @@
 #! /bin/bash
 
-curl -X POST localhost:8080/customResponse -d '{"size": 10}'; echo
+ping localhost -c 2 && ping localhost -6 -c 2
