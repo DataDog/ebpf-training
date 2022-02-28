@@ -61,3 +61,14 @@ sudo go run main.go ./watcher.c --level 2 --level2-pid 2222
 
 If you try to access `sensitive.key` file from the first python shell, it'll work for you without any problem.
 But if you try to access it from the second shell, you'll get permission denied!
+
+
+# The details
+
+We are hooking the `openat` syscall, which is responsible for opening files in the system, and it is widely used in the system.
+
+In the first level, we are sending an event from the kernel to the user mode if the `openat` syscall is being called on path that ends with `sensitive.key`.
+We are in audit mode.
+
+In the second level, we are changing the return code of the syscall, if the path ends with `sensitive.key` and the process id accessing the file
+is not whitelisted.
