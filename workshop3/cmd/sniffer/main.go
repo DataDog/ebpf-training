@@ -85,13 +85,13 @@ var (
 		{
 			FunctionToHook: "udp_sendmsg",
 			HookName:       "trace_udp_sendmsg",
-			Type:           EntryType,
+			Type:           bpfwrapper.EntryType,
 			IsSyscall:      true,
 		},
 		{
 			FunctionToHook: "tcp_sendmsg",
 			HookName:       "trace_tcp_sendmsg",
-			Type:           EntryType,
+			Type:           bpfwrapper.EntryType,
 			IsSyscall:      true,
 		},
 	}
