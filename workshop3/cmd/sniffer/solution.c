@@ -230,3 +230,180 @@ int syscall__probe_ret_close(struct pt_regs* ctx) {
     }
     return 0;
 }
+
+#include <net/sock.h>
+//the structure that will be used as a key for
+// eBPF table 'proc_ports':
+struct port_key {
+    u8 proto;
+    u32 saddr;
+    u32 daddr;
+    u16 sport;
+    u16 dport;
+};
+// the structure which will be stored in the eBPF table 'proc_ports',
+// contains information about the process:
+struct port_val {
+    u32 ifindex;
+    u32 pid;
+    u32 tgid;
+    u32 uid;
+    u32 gid;
+    char comm[64];
+};
+// Public (accessible from other eBPF programs) eBPF table
+// information about the process is written to.
+// It is read when a packet appears on the socket:
+BPF_TABLE_PUBLIC("hash", struct port_key, struct port_val, proc_ports, 20480);
+int trace_udp_sendmsg(struct pt_regs *ctx) {
+    struct sock *sk = (struct sock *)PT_REGS_PARM1(ctx);
+    u16 sport = sk->sk_num;
+    u16 dport = sk->sk_dport;
+  
+    // Processing only packets on port 53.
+    // 13568 = ntohs(53);
+    if (sport == 13568 || dport == 13568) {
+        // Preparing the data:
+        u32 saddr = sk->sk_rcv_saddr;
+        u32 daddr = sk->sk_daddr;
+        u64 pid_tgid = bpf_get_current_pid_tgid();
+        u64 uid_gid = bpf_get_current_uid_gid();
+        // Forming the structure-key.
+        struct port_key key = {.proto = 17};
+        key.saddr = htonl(saddr);
+        key.daddr = htonl(daddr);
+        key.sport = sport;
+        key.dport = htons(dport);
+        //Forming a structure with socket properties:
+        struct port_val val = {};
+        val.pid = pid_tgid >> 32;
+        val.tgid = (u32)pid_tgid;
+        val.uid = (u32)uid_gid;
+        val.gid = uid_gid >> 32;
+        bpf_get_current_comm(val.comm, 64);
+        //Write the value into the eBPF table:
+        proc_ports.update(&key, &val);
+    }
+    return 0;
+}
+int trace_tcp_sendmsg(struct pt_regs *ctx, struct sock *sk) {
+    u16 sport = sk->sk_num;
+    u16 dport = sk->sk_dport;
+  
+    // Processing only packets on port 53.
+    // 13568 = ntohs(53);
+    if (sport == 13568 || dport == 13568) {
+        // preparing the data:
+        u32 saddr = sk->sk_rcv_saddr;
+        u32 daddr = sk->sk_daddr;
+        u64 pid_tgid = bpf_get_current_pid_tgid();
+        u64 uid_gid = bpf_get_current_uid_gid();
+        // Forming the structure-key.
+        struct port_key key = {.proto = 6};
+        key.saddr = htonl(saddr);
+        key.daddr = htonl(daddr);
+        key.sport = sport;
+        key.dport = htons(dport);
+        //Form a structure with socket properties:
+        struct port_val val = {};
+        val.pid = pid_tgid >> 32;
+        val.tgid = (u32)pid_tgid;
+        val.uid = (u32)uid_gid;
+        val.gid = uid_gid >> 32;
+        bpf_get_current_comm(val.comm, 64);
+        //Write the value into the eBPF table:
+        proc_ports.update(&key, &val);
+    }
+    return 0;
+}
+
+//the structure that will be used as a key for
+// eBPF table 'proc_ports':
+struct port_key {
+    u8 proto;
+    u32 saddr;
+    u32 daddr;
+    u16 sport;
+    u16 dport;
+};
+// the structure which will be stored in the eBPF table 'proc_ports',
+// contains information about the process:
+struct port_val {
+    u32 ifindex;
+    u32 pid;
+    u32 tgid;
+    u32 uid;
+    u32 gid;
+    char comm[64];
+};
+// eBPF table from which information about the process is extracted.
+// Filled when calling kernel functions udp_sendmsg()/tcp_sendmsg():
+BPF_TABLE("extern", struct port_key, struct port_val, proc_ports, 20480);
+// table for transmitting data to the user space:
+BPF_PERF_OUTPUT(dns_events);
+// Among the data passing through the socket, look for DNS packets
+// and check for information about the process:
+int dns_matching(struct __sk_buff *skb) {
+    u8 *cursor = 0;
+    // check the IP protocol:
+    struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
+    if (ethernet->type == ETH_P_IP) {
+        struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
+        u8 proto;
+        u16 sport;
+        u16 dport;
+        // We check the transport layer protocol:
+        if (ip->nextp == IPPROTO_UDP) {
+            struct udp_t *udp = cursor_advance(cursor, sizeof(*udp));
+            proto = 17;
+            //receive port data:
+            sport = udp->sport;
+            dport = udp->dport;
+        } else if (ip->nextp == IPPROTO_TCP) {
+            struct tcp_t *tcp = cursor_advance(cursor, sizeof(*tcp));
+            // We don't need packets where no data is transmitted:
+            if (!tcp->flag_psh) {
+                return 0;
+            }
+            proto = 6;
+            // We get the port data:
+            sport = tcp->src_port;
+            dport = tcp->dst_port;
+        } else {
+            return 0;
+        }
+        // if this is a DNS request:
+        if (dport == 53 || sport == 53) {
+            // we form the structure-key:
+            struct port_key key = {};
+            key.proto = proto;
+            if (skb->ingress_ifindex == 0) {
+                key.saddr = ip->src;
+                key.daddr = ip->dst;
+                key.sport = sport;
+                key.dport = dport;
+            } else {
+                key.saddr = ip->dst;
+                key.daddr = ip->src;
+                key.sport = dport;
+                key.dport = sport;
+            }
+            // By the key we are looking for a value in the eBPF table:
+            struct port_val *p_val;
+            p_val = proc_ports.lookup(&key);
+            // If the value is not found, it means that we do not have information about the
+            // process, so there is no point in continuing:
+            if (!p_val) {
+                return 0;
+            }
+            // network device index:
+            p_val->ifindex = skb->ifindex;
+            // pass the structure with the process information along with
+            // skb->len bytes sent to the socket:
+            dns_events.perf_submit_skb(skb, skb->len, p_val,
+                                       sizeof(struct port_val));
+            return 0;
+        } //dport == 53 || sport == 53
+    } //ethernet->type == ETH_P_IP
+    return 0;
+}
