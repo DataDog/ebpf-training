@@ -8,3 +8,7 @@ Workshops:
 3. [A step by step tutorial for simple HTTP trafic capturing](./workshop3/README.md)
 4. [Audit and Deny access to sensitive file](./workshop4/README.md)
 5. [Capture TLS traffic](./workshop5/README.md)
+
+
+## Team notes
+This week we are starting by following workshop 1 turorial which is defined above
