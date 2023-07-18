@@ -317,25 +317,6 @@ int trace_tcp_sendmsg(struct pt_regs *ctx, struct sock *sk) {
     return 0;
 }
 
-//the structure that will be used as a key for
-// eBPF table 'proc_ports':
-struct port_key {
-    u8 proto;
-    u32 saddr;
-    u32 daddr;
-    u16 sport;
-    u16 dport;
-};
-// the structure which will be stored in the eBPF table 'proc_ports',
-// contains information about the process:
-struct port_val {
-    u32 ifindex;
-    u32 pid;
-    u32 tgid;
-    u32 uid;
-    u32 gid;
-    char comm[64];
-};
 // eBPF table from which information about the process is extracted.
 // Filled when calling kernel functions udp_sendmsg()/tcp_sendmsg():
 BPF_TABLE("extern", struct port_key, struct port_val, proc_ports, 20480);
