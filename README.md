@@ -12,3 +12,12 @@ Workshops:
 
 ## Team notes
 This week we are starting by following workshop 1 turorial which is defined above
+
+## Setup
+
+```
+git clone https://github.com/mgrosen/ebpf-training.git
+cd ebpf-training
+chmod +x setup.sh
+./setup.sh
+```

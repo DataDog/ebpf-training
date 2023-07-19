@@ -6,7 +6,7 @@ grep -Ew 'CONFIG_BPF|CONFIG_BPF_SYSCALL|CONFIG_NET_CLS_BPF|CONFIG_NET_ACT_BPF|CO
 echo "Started installing the required packages..."
 
 sudo apt-get update
-sudo apt-get install bpfcc-tools linux-headers-$(uname -r)
+sudo apt-get install -y bpfcc-tools linux-headers-$(uname -r)
 # sudo opensnoop-bpfcc
 
 # echo "export PATH=$PATH:/usr/local/go/bin" >> /etc/profile
@@ -25,7 +25,7 @@ sudo apt install -y zip bison build-essential cmake flex git libedit-dev \
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD
 echo "deb https://repo.iovisor.org/apt/bionic bionic main" | sudo tee /etc/apt/sources.list.d/iovisor.list
 sudo apt-get update
-sudo apt-get install bcc-tools libbcc-examples linux-headers-$(uname -r)
+sudo apt-get install -y bcc-tools libbcc-examples linux-headers-$(uname -r)
 
 sudo /usr/local/go/bin/go get -u ./...
 
