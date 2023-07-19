@@ -4,6 +4,8 @@
 #include <linux/net.h>
 #include <linux/socket.h>
 #include <net/inet_sock.h>
+#include <net/sock.h>
+#include <bcc/proto.h>
 
 union sockaddr_t {
     struct sockaddr sa;
@@ -231,7 +233,6 @@ int syscall__probe_ret_close(struct pt_regs* ctx) {
     return 0;
 }
 
-#include <net/sock.h>
 //the structure that will be used as a key for
 // eBPF table 'proc_ports':
 struct port_key {
