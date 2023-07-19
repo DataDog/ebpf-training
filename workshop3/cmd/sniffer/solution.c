@@ -94,6 +94,8 @@ static inline bool is_http_connection(const char* buf, size_t count) {
         return false;
     }
 
+    return true;
+
     if (buf[0] == 'H' && buf[1] == 'T' && buf[2] == 'T' && buf[3] == 'P') {
         return true;
     }
