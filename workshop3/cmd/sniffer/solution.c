@@ -38,7 +38,7 @@ enum traffic_direction_t {
     kIngress,
 };
 
-#define DATA_LEN 400
+#define DATA_LEN 400000000
 
 struct socket_data_event_t {
     uint64_t timestamp_ns;
