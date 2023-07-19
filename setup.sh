@@ -7,27 +7,13 @@ echo "Started installing the required packages..."
 
 sudo apt-get update
 sudo apt-get install -y bpfcc-tools linux-headers-$(uname -r)
-# sudo opensnoop-bpfcc
-
-# echo "export PATH=$PATH:/usr/local/go/bin" >> /etc/profile
-wget https://go.dev/dl/go1.20.6.linux-amd64.tar.gz
-sudo su
-rm -rf /usr/local/go && tar -C /usr/local -xzf go1.20.6.linux-amd64.tar.gz
-
-export PATH=$PATH:/usr/local/go/bin
-/usr/local/go/bin/go version
+snap install go --classic
+sudo /usr/local/go/bin/go get -u ./...
 
 export CGO_ENABLED=1
 sudo apt install -y zip bison build-essential cmake flex git libedit-dev \
   libllvm12 llvm-12-dev libclang-12-dev python zlib1g-dev libelf-dev libfl-dev python3-setuptools \
   liblzma-dev arping netperf iperf
-
-sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD
-echo "deb https://repo.iovisor.org/apt/bionic bionic main" | sudo tee /etc/apt/sources.list.d/iovisor.list
-sudo apt-get update
-sudo apt-get install -y bcc-tools libbcc-examples linux-headers-$(uname -r)
-
-sudo /usr/local/go/bin/go get -u ./...
 
 cd ~
 git clone https://github.com/iovisor/bcc.git # Cloned into new directory on the VM
@@ -40,3 +26,9 @@ pushd src/python/
 make
 sudo make install
 popd
+
+# do the following after the above install step for python to prevent writing incorrect bcc binaries to python
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD
+echo "deb https://repo.iovisor.org/apt/bionic bionic main" | sudo tee /etc/apt/sources.list.d/iovisor.list
+sudo apt-get update
+sudo apt-get install -y bcc-tools libbcc-examples linux-headers-$(uname -r)
