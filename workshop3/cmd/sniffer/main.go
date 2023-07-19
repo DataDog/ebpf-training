@@ -82,18 +82,18 @@ var (
 			Type:           bpfwrapper.ReturnType,
 			IsSyscall:      true,
 		},
-		{
-			FunctionToHook: "udp_sendmsg",
-			HookName:       "trace_udp_sendmsg",
-			Type:           bpfwrapper.EntryType,
-			IsSyscall:      true,
-		},
-		{
-			FunctionToHook: "tcp_sendmsg",
-			HookName:       "trace_tcp_sendmsg",
-			Type:           bpfwrapper.EntryType,
-			IsSyscall:      true,
-		},
+		// {
+		// 	FunctionToHook: "udp_sendmsg",
+		// 	HookName:       "trace_udp_sendmsg",
+		// 	Type:           bpfwrapper.EntryType,
+		// 	IsSyscall:      true,
+		// },
+		// {
+		// 	FunctionToHook: "tcp_sendmsg",
+		// 	HookName:       "trace_tcp_sendmsg",
+		// 	Type:           bpfwrapper.EntryType,
+		// 	IsSyscall:      true,
+		// },
 	}
 )
 
