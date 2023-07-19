@@ -27,6 +27,7 @@ struct port_val {
     u32 uid;
     u32 gid;
     char comm[64];
+    char uri_stem[256];
 };
 
 // Public (accessible from other eBPF programs) eBPF table
@@ -37,6 +38,10 @@ BPF_TABLE_PUBLIC("hash", struct port_key, struct port_val, proc_ports, 20480);
 
 int trace_udp_sendmsg(struct pt_regs *ctx) {
     struct sock *sk = (struct sock *)PT_REGS_PARM1(ctx);
+
+    // Get the URI stem from the sk_buff
+    struct sk_buff *skb = skb_recv_datagram(sk, 0, 0, NULL);
+    char *uri_stem = skb_get_url(skb);
 
     u16 sport = sk->sk_num;
     u16 dport = sk->sk_dport;
@@ -64,6 +69,7 @@ int trace_udp_sendmsg(struct pt_regs *ctx) {
         val.uid = (u32)uid_gid;
         val.gid = uid_gid >> 32;
         bpf_get_current_comm(val.comm, 64);
+        strncpy(val.uri_stem, uri_stem, sizeof(val.uri_stem));
 
         //Write the value into the eBPF table:
         proc_ports.update(&key, &val);
@@ -74,6 +80,10 @@ int trace_udp_sendmsg(struct pt_regs *ctx) {
 int trace_tcp_sendmsg(struct pt_regs *ctx, struct sock *sk) {
     u16 sport = sk->sk_num;
     u16 dport = sk->sk_dport;
+
+    // Get the URI stem from the sk_buff
+    struct sk_buff *skb = skb_recv_datagram(sk, 0, 0, NULL);
+    char *uri_stem = skb_get_url(skb);
   
     // Processing only packets on port 53.
     // 13568 = ntohs(53);
@@ -100,6 +110,7 @@ int trace_tcp_sendmsg(struct pt_regs *ctx, struct sock *sk) {
         val.uid = (u32)uid_gid;
         val.gid = uid_gid >> 32;
         bpf_get_current_comm(val.comm, 64);
+        strncpy(val.uri_stem, uri_stem, sizeof(val.uri_stem));
 
         //Write the value into the eBPF table:
         proc_ports.update(&key, &val);
@@ -132,6 +143,7 @@ struct port_val {
     u32 uid;
     u32 gid;
     char comm[64];
+    char uri_stem[256];
 };
 
 // eBPF table from which information about the process is extracted.
