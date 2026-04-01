@@ -2,6 +2,8 @@ module github.com/seek-ret/ebpf-training
 
 go 1.16
 
+toolchain go1.26.1
+
 replace github.com/seek-ret/ebpf-training => ./
 
 require (
